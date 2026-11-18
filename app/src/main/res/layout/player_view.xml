@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  0.25.2：视频渲染壳固定用 TextureView。
+
+  Media3 PlayerView 默认的 surface_type=surface_view 会在独立 window / 硬件 video
+  overlay plane 上渲染，创建时是一块空的黑 surface，电视上 Z 序由 HWC 决定，
+  Compose 的封面层不一定盖得住 —— 0.25.0 把加载层换成不透明缩略图之后，
+  按 OK 挂上播放器那一瞬就会「封面 → 黑帧」。
+
+  TextureView 是普通 View：不挖洞、不走独立 video layer、未出帧时透明，
+  Z 序与 Compose 层确定，封面必然盖得住，撤封面时底下已经是视频画面。
+  代价是多一次 GPU 纹理拷贝（电视上要目测高码率 / 4K 是否掉帧）。
+-->
+<androidx.media3.ui.PlayerView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/player_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:surface_type="texture_view"
+    app:use_controller="false"
+    app:resize_mode="fit" />

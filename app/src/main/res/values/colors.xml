@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 图标底色。飞牛官方品牌蓝（取自 NAS 登录页 :root 里的 primary 变量），纯色无渐变。
+         自适应图标裁圆时边缘无缝；启动页那张圆角方块也用这个底色。 -->
+    <color name="ic_launcher_background">#0066FF</color>
+</resources>

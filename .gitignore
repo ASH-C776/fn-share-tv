@@ -1,0 +1,26 @@
+*.iml
+.gradle
+.kotlin
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+app/build
+
+# 调试截图与 uiautomator 导出，别进版本库
+/*.png
+/*.xml
+
+# WorkBuddy 会话数据与调试产物（保留在磁盘，不进版本库）
+/.workbuddy/
+
+# 图标设计稿与渲染中间产物（留在磁盘，不进版本库）
+/_build/
+/logo-fn-shared/
+
+# 飞牛音乐接口逆向笔记：含测试账号凭据与内网地址，仅本地留存，不发布
+/docs/FN_MUSIC_API.md

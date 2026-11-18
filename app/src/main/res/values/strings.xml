@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FN 共享相册</string>
+
+    <string name="home_title">共享相册</string>
+    <string name="home_empty">还没有人分享相册给这个账号</string>
+    <string name="home_empty_hint">在飞牛相册里把相册共享给它，这里就会出现</string>
+
+    <string name="login_subtitle">连接家里的飞牛 NAS，浏览家人共享给这个账号的相册</string>
+    <string name="login_host">NAS 地址</string>
+    <string name="login_host_hint">NAS 地址（如 192.168.1.66）</string>
+    <string name="login_user">账号</string>
+    <string name="login_password">密码</string>
+    <string name="login_code_title">输入访问码</string>
+    <string name="login_code_body">这台 NAS 开了访问码，验证一次后这台电视会一直被记住。</string>
+    <string name="login_code_hint">访问码</string>
+    <string name="login_code_confirm">确定</string>
+    <string name="login_connect">连接</string>
+    <string name="login_connecting">正在连接…</string>
+
+    <string name="wall_album_count">%1$d 张</string>
+    <string name="wall_loading">正在读取共享相册…</string>
+    <string name="wall_footer">只读。这里只显示别人主动共享给这台电视账号的相册。</string>
+    <string name="wall_sign_out">退出登录</string>
+    <string name="wall_settings">设置</string>
+    <string name="wall_refresh">刷新</string>
+    <string name="wall_sign_out_title">要退出登录吗？</string>
+    <string name="wall_sign_out_body">退出后会回到登录页，需要重新填 NAS 地址和账号。</string>
+    <string name="wall_cancel">取消</string>
+
+    <string name="settings_title">设置</string>
+    <string name="settings_group_play">播放</string>
+    <string name="settings_group_display">显示</string>
+    <string name="settings_group_cache">缓存</string>
+    <string name="settings_group_more">更多</string>
+    <string name="settings_cache_index">照片索引</string>
+    <string name="settings_cache_thumb">图片缓存</string>
+    <string name="settings_cache_clear">清除缓存</string>
+    <string name="settings_cache_clear_title">清除缓存？</string>
+    <string name="settings_cache_clear_body">会删掉照片索引、缩略图和 1080p 预览。索引删掉后，下次进相册要重新拉一遍清单；图片缓存删掉后，看图要重新下载（原图只在内存里，不受影响）。</string>
+    <string name="settings_cache_rebuilding">更新中 %1$d/%2$d</string>
+    <string name="settings_refresh">刷新相册</string>
+    <string name="settings_more">更多</string>
+    <string name="settings_sign_out">退出登录</string>
+    <string name="settings_auto_play">打开就自动播放</string>
+    <string name="settings_idle">闲置保护</string>
+    <string name="settings_idle_minutes">%1$d 分钟</string>
+    <string name="settings_focus_zoom">聚焦动效</string>
+    <string name="settings_focus_ring">焦点颜色</string>
+    <string name="settings_backdrop_wall">相册背景</string>
+    <string name="settings_backdrop_grid">相片背景</string>
+    <string name="settings_on">开</string>
+    <string name="settings_off">关</string>
+    <string name="settings_footer">%1$s · v%2$s</string>
+
+    <string name="grid_loading">正在加载…</string>
+    <string name="grid_count">已加载 %1$d / %2$d 张</string>
+    <string name="grid_loaded">已加载 %1$d 张</string>
+    <string name="grid_empty">这个相册里没有照片</string>
+    <string name="grid_empty_hint">退回相册墙换一本，或稍后再试</string>
+    <string name="grid_failed">照片没读出来</string>
+    <string name="grid_failed_hint">NAS 可能睡着了，或者网络断了一下</string>
+    <string name="grid_retry">重试</string>
+
+    <string name="viewer_counter">%1$d / %2$d</string>
+    <string name="viewer_counter_more">%1$d / %2$d+</string>
+    <string name="viewer_slideshow_on">幻灯片 · %1$d / %2$d</string>
+    <string name="viewer_slideshow_more">幻灯片 · %1$d / %2$d+</string>
+    <!-- 左上信息框（MENU 键开关）只写值，不带「日期」「地点」标签。 -->
+    <!-- 0.25.3：播放中不挂状态牌；暂停时给明确的操作提示，避免和静止封面混淆。 -->
+    <!-- 视频暂停与幻灯片暂停共用同一句提示。 -->
+    <string name="viewer_status_paused">已暂停，按 OK 继续</string>
+    <string name="viewer_status_fast">快进</string>
+    <string name="viewer_status_ended">播完</string>
+    <!-- 0.24.12：取流 / 解码失败时不再黑屏无提示。 -->
+    <string name="viewer_video_error">视频无法播放</string>
+    <string name="viewer_video_error_hint">片源可能损坏或网络中断，按左右键切换、按返回键退出</string>
+    <!-- 0.24.13：电视取不到 logcat，把错误码显示在屏上，便于回报具体解码/取流失败原因。 -->
+    <string name="viewer_video_error_code">错误码：%1$s</string>
+    <!-- 照片缩放档位提示。 -->
+    <string name="viewer_zoom_default">默认</string>
+    <string name="viewer_zoom_17">1.7倍</string>
+    <string name="viewer_zoom_25">2.5倍</string>
+    <!-- 两段退出。 -->
+    <string name="viewer_exit_hint">再按一次退出</string>
+
+    <!-- 看图底部菜单（照片态）。 -->
+    <string name="menu_slideshow">幻灯片</string>
+    <string name="menu_original">原图</string>
+    <!-- 二级幻灯片设置：播放/时长/顺序/过渡/音乐。过渡与音乐只留入口。 -->
+    <string name="menu_play">播放</string>
+    <string name="menu_duration">时长</string>
+    <string name="menu_order">顺序</string>
+    <string name="menu_loop">循环</string>
+    <string name="menu_transition">过渡</string>
+    <string name="menu_animation">动画</string>
+    <string name="menu_aspect">比例</string>
+    <string name="menu_music">音乐</string>
+    <!-- 幻灯片二级菜单「音乐」行：本地 5首 / 飞牛音乐/相册专用 / 未选择；不带账号。 -->
+    <string name="menu_music_local_count">本地 %1$d首</string>
+    <string name="menu_music_none">未选择</string>
+    <string name="menu_order_seq">顺序</string>
+    <string name="menu_order_random">随机</string>
+    <string name="menu_seconds">%1$d秒</string>
+    <string name="menu_fade">叠化</string>
+    <string name="menu_zoom">放大</string>
+    <string name="menu_fill">满屏</string>
+    <string name="menu_fit">原比例</string>
+    <string name="menu_off">关闭</string>
+
+    <!-- 幻灯片背景音乐弹窗。 -->
+    <string name="music_title">背景音乐</string>
+    <string name="music_hint">勾选曲目作为幻灯片背景乐，按上方顺序循环播放</string>
+    <string name="music_order">播放顺序</string>
+    <string name="music_order_seq">顺序</string>
+    <string name="music_order_random">随机</string>
+    <string name="music_lyrics">歌词</string>
+    <string name="music_refresh">扫描电视</string>
+    <string name="music_refresh_hint">扫描电视存储的 Music 文件夹（路径：/sdcard/Music 或 内部存储/Music）</string>
+    <string name="music_refresh_short">扫描电视</string>
+    <string name="music_refresh_value">重新扫描</string>
+    <string name="music_select_all">全选</string>
+    <string name="music_select_all_off">取消全选</string>
+    <string name="music_empty">没有找到音乐文件\n请把歌曲放进电视存储的 Music 文件夹（路径：/sdcard/Music）</string>
+    <string name="music_scanning">扫描中…</string>
+    <string name="music_permission">需要读取音乐文件的权限</string>
+    <string name="music_permission_grant">去授权</string>
+    <string name="music_selected">已选 %1$d 首</string>
+    <string name="music_stale_hint">之前勾选的 %1$d 首曲子现在找不到了（文件被移动或路径变了），请重新勾选。</string>
+    <string name="music_playing">播放中</string>
+    <string name="music_unsupported">格式不支持，播不了</string>
+    <string name="music_play_failed">有曲子播不出来（格式不支持或文件损坏），已跳到下一首</string>
+    <string name="music_duration">%1$d:%2$02d</string>
+
+    <!-- 双源：工具条第 5 格「来源」与二级面板。 -->
+    <string name="music_source">来源</string>
+    <string name="music_source_local">本地音乐</string>
+    <string name="music_source_local_short">本地</string>
+    <string name="music_source_local_sub">电视存储的 Music 文件夹</string>
+    <string name="music_source_fn">飞牛音乐</string>
+    <string name="music_source_fn_short">飞牛</string>
+    <string name="music_source_fn_logged">已登录：%1$s</string>
+    <string name="music_source_fn_not_logged">未登录，先到设置页登录</string>
+    <string name="music_source_panel_hint">OK 选择来源 · ←/Back 取消</string>
+    <string name="music_refresh_fn">刷新歌单</string>
+    <string name="music_loading">加载中…</string>
+    <string name="music_no_groups">没有歌单</string>
+    <string name="music_groups_hint">已勾选 %1$d 个歌单 · OK 勾选/取消，播放幻灯片时自动播放其中歌曲</string>
+    <string name="music_breadcrumb_local">本地音乐</string>
+    <string name="music_breadcrumb_fn_groups">飞牛音乐 · 歌单</string>
+    <string name="music_breadcrumb_fn_tracks">飞牛音乐 · %1$s</string>
+
+    <!-- 网格按天分组：日期头。宝宝相册用「X岁X月X天」代替日期。 -->
+    <string name="day_today">今天</string>
+    <string name="day_yesterday">昨天</string>
+    <string name="baby_age_format">%1$d 岁 %2$d 个月 %3$d 天</string>
+
+    <!-- 右侧时间轴（网格行尾按右键溢出）。月份名走系统语言，不在这里写死。 -->
+    <string name="timeline_year">%1$d年</string>
+    <!-- 宝宝相册的时间轴一级/二级：0岁在最下，二级是月龄。 -->
+    <string name="timeline_baby_years">%1$d岁</string>
+    <string name="timeline_baby_months">%1$d个月</string>
+
+    <!-- 飞牛音乐子账户：设置页入口与登录弹窗。 -->
+    <string name="fnm_settings_entry">飞牛音乐</string>
+    <string name="fnm_status_off">未登录</string>
+    <string name="fnm_status_on">已登录：%1$s</string>
+    <string name="fnm_login_title">登录飞牛音乐</string>
+    <string name="fnm_login_body">请输入同一台飞牛NAS的飞牛音乐帐号</string>
+    <string name="fnm_url_hint">飞牛音乐地址（自动沿用相册 NAS）：%1$s</string>
+    <string name="fnm_url_missing">未检测到相册 NAS 地址，请先在相册登录页连接同一台飞牛 NAS</string>
+    <string name="fnm_user_hint">账号</string>
+    <string name="fnm_password_hint">密码</string>
+    <string name="fnm_code_hint">访问码（可选）</string>
+    <string name="fnm_connect">重新登录</string>
+    <string name="fnm_connect_first">登录</string>
+    <string name="fnm_connecting">验证中…</string>
+    <string name="fnm_sign_out">退出登录</string>
+    <string name="fnm_err_code">需要访问码，或访问码不正确</string>
+    <string name="fnm_err_credential">音乐账号或密码错误</string>
+    <string name="fnm_err_network">连不上音乐服务，检查地址与 NAS 状态</string>
+</resources>

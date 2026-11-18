@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 更新 APK 落在 filesDir/update/，授权系统安装器读这一处即可。 -->
+    <files-path
+        name="update"
+        path="update/" />
+</paths>

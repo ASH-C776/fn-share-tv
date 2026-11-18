@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 更新 APK 后拉起系统安装界面（0.31.0）。 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- 读电视存储里 music 文件夹下的本地音乐。Android 13+ 用 READ_MEDIA_AUDIO，
+         低版本用 READ_EXTERNAL_STORAGE；两者都声明，系统按设备版本挑生效的那一个。 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- 电视没网就没有这个应用存在的意义，但声明成可选，避免挡住手机上的调试安装。 -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
+    <!-- 飞牛 NAS 的 5666 端口默认是明文 HTTP（5667 才是 HTTPS）。电视在家庭内网里，
+         要连的那台机器就在同一个路由器下，所以这里放开明文；用 HTTPS 的话走 5667 也只多一次
+         证书信任，不影响这条设置。 -->
+    <!-- largeHeap：看「原图」时一张 12MP 位图解码后约 48MB，PhotoStage 两个槽各常驻一张，
+         加上解码峰值和 Coil 的内存缓存，192MB 的默认上限不够用（电视 RAM 3.7GB，放开到
+         512MB 不吃亏）。它只抬上限，用不到就不占。 -->
+    <application
+        android:hardwareAccelerated="true"
+        android:allowBackup="false"
+        android:largeHeap="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:banner="@drawable/ic_banner"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.FnShare.Splash"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:exported="true"
+            android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <!-- 电视桌面读这条；手机桌面读上面那条。两个都留着，同一份包装两边都能开。 -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 把 filesDir/update 下的 APK 授权给系统安装器（0.31.0）。
+             authority 用 ${applicationId} 前缀，debug 包自动变成 .debug.fileprovider，
+             和 MainActivity 里 getUriForFile 的 "${packageName}.fileprovider" 一致。 -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+
+</manifest>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  电视桌面的横幅（320×180）。没有它的话 Android TV 桌面只显示一行应用名，
+  而「FN 共享相册」在列表里和别的应用长得一模一样。
+
+  整幅用飞牛品牌蓝 #0066FF（纯色，不用渐变），中间一个白色相框：
+  和应用图标同一个造型，桌面上远看是对得上的，不用读字就知道是看照片的。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+
+    <!-- 底：飞牛蓝，纯色 -->
+    <path
+        android:pathData="M0,0 L320,0 L320,180 L0,180 Z"
+        android:fillColor="#0066FF" />
+
+    <!-- 相框：白色描边圆角方 -->
+    <path
+        android:pathData="M117,31 L203,31 A16,16 0 0 1 219,47 L219,133 A16,16 0 0 1 203,149 L117,149 A16,16 0 0 1 101,133 L101,47 A16,16 0 0 1 117,31 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="11" />
+
+    <!-- 框里的山：白色实心，底部留一线蓝，不贴框 -->
+    <path
+        android:pathData="M120,132 L120,114 L141,86 L155,107 L176,80 L200,110 L200,132 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- 太阳 -->
+    <path
+        android:pathData="M181,64 m-5.5,0 a5.5,5.5 0 1 0 11,0 a5.5,5.5 0 1 0 -11,0"
+        android:fillColor="#FFFFFF" />
+</vector>

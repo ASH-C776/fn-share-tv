@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 应用主题。真正的配色在 Compose 的 FnShareTheme 里，这里只管窗口底色。 -->
+    <style name="Theme.FnShare" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0F0F0F</item>
+        <item name="android:statusBarColor">#0F0F0F</item>
+        <item name="android:navigationBarColor">#0F0F0F</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- 冷启动主题（0.29.4 改）。系统层只铺底色、不画图标：创维电视的 ROM 不画
+         windowSplashScreenAnimatedIcon，之前把图标交给它，电视上按 OK 就是一段黑屏。
+         现在图标改由应用自绘的启动页画一次，系统层只在最前面铺同样的 #0F0F0F 底色，
+         两层颜色一致，交接时看不出切换，也就没有「圆形 → 方块」那种跳变。
+
+         图标位置放一张全透明的图（ic_splash_transparent），不能写 @null——部分 ROM 会把
+         null 回退成默认 launcher 图标（自适应图标被套圆形遮罩），MuMu 上就会先画一个圆、
+         应用再画一个方块，交接时跳一下。透明图在所有系统上都保证不显示。
+         必须是 0.29.1 引入的 core-splashscreen 主题（parent Theme.SplashScreen），不能退回
+         普通 Theme.FnShare。图标资源 ic_splash_icon.png 保留但不再引用，留作回退对照。 -->
+    <style name="Theme.FnShare.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0F0F0F</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_transparent</item>
+        <item name="postSplashScreenTheme">@style/Theme.FnShare</item>
+    </style>
+</resources>
