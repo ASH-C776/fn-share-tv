@@ -52,6 +52,8 @@ sealed interface Screen {
     data object Login : Screen
     data object Wall : Screen
     data object Settings : Screen
+    /** 设置页「更多」入口打开：应用信息、开源地址、使用说明。返回固定回设置页。 */
+    data object More : Screen
     data class Grid(val album: SharedAlbum) : Screen
     data class Viewer(val album: SharedAlbum, val index: Int) : Screen
 }

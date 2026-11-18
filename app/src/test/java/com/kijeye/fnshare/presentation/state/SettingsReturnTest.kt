@@ -36,4 +36,12 @@ class SettingsReturnTest {
         assertEquals(Screen.Wall, settingsReturnTarget(Screen.Login))
         assertEquals(Screen.Wall, settingsReturnTarget(null))
     }
+
+    @Test
+    fun `更多页不作为设置入口来源 避免返回到已关闭的页面`() {
+        // 「更多」页有自己的返回路径（固定回设置页），不经过 settingsReturn。
+        // 万一以后有人在更多页直接开设置，settingsReturn 会被记成 Screen.More，
+        // 这条断言保证那种情况下仍回相册墙，而不是返回到一个早该关掉的信息页。
+        assertEquals(Screen.Wall, settingsReturnTarget(Screen.More))
+    }
 }

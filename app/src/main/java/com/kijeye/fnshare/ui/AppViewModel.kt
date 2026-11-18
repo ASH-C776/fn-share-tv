@@ -1292,6 +1292,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app), AppEventSink {
         _state.update { it.copy(screen = target) }
     }
 
+    /**
+     * 设置页「更多」入口。这是只读信息页，只有一个来源（设置页），返回固定回设置页，
+     * 不需要像设置页那样记住入口——更不需要碰 [settingsReturn]，返回后它原样还在，
+     * 从「更多」退回设置再返回，仍旧回到进设置前的那本相册/相册墙。
+     */
+    fun openMore() = _state.update { it.copy(screen = Screen.More) }
+
+    fun closeMore() = _state.update { it.copy(screen = Screen.Settings) }
+
     fun setSlideSeconds(seconds: Int) {
         settings.slideSeconds = seconds
         _state.update { it.copy(slideSeconds = seconds) }
@@ -1836,6 +1845,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app), AppEventSink {
             is AppEvent.OpenAlbum -> openAlbum(event.album)
             AppEvent.OpenSettings -> openSettings()
             AppEvent.CloseSettings -> closeSettings()
+            AppEvent.OpenMore -> openMore()
+            AppEvent.CloseMore -> closeMore()
             AppEvent.BackToWall -> backToWall()
             AppEvent.RefreshAlbums -> refreshAlbums()
             AppEvent.ClearCache -> clearCache()

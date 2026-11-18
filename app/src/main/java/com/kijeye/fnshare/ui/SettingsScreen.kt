@@ -10,7 +10,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.kijeye.fnshare.BuildConfig
 import com.kijeye.fnshare.R
 import kotlinx.coroutines.delay
@@ -61,6 +62,22 @@ private const val FOCUS_SETTLE_MS = 80L
  * 真正的兜底仍是 verticalScroll，收紧只是让矮屏不必滚。
  */
 private const val COMPACT_HEIGHT_DP = 580
+
+/**
+ * 设置页所有行的统一框高（0.32.0）。
+ *
+ * 之前三类行各按内容撑高：带值胶囊的 SettingRow/ColorRow 实测 54.3dp，只有箭头的
+ * ActionRow 实测 41.7dp，差 12dp，6 行排下来高低不齐。改成固定高度把这一档钉死，
+ * 行的视觉高度不再随内容是胶囊还是箭头漂移。
+ *
+ * 为什么是 50dp：MuMu 横屏逻辑高 617dp（1080px / 1.75）。标题约 48dp、三个组标签
+ * 共约 126dp、上下留白 24dp，留给 6 行约 419dp；6×50=300dp 再加行间距仍宽裕，
+ * 一屏放得下。高的行降 4dp、矮的行升 8dp，改动量最小。
+ *
+ * 字体不在这一档里改：行标题和值胶囊本来都是 titleSmall（18sp），已经是统一的；
+ * 50dp 框里放 18sp 文字和 6dp 内边距的值胶囊仍有富余，不会挤。
+ */
+private val SETTINGS_ROW_HEIGHT = 50.dp
 
 /**
  * 设置页的二维焦点网格：每行几个可聚焦格子，顺序必须和页面里的行顺序一致。
@@ -566,8 +583,10 @@ private fun SettingRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
+            // 2dp 是框外间距，必须写在 height 之前：height 约束的是它后面的框本身，
+            // 这样框高恒等于 SETTINGS_ROW_HEIGHT，不被值胶囊/箭头的内容高度带偏。
             .padding(vertical = 2.dp)
+            .height(SETTINGS_ROW_HEIGHT)
             .clip(RoundedCornerShape(10.dp))
             .background(
                 if (focused) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
@@ -653,8 +672,10 @@ private fun ColorRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
+            // 2dp 是框外间距，必须写在 height 之前：height 约束的是它后面的框本身，
+            // 这样框高恒等于 SETTINGS_ROW_HEIGHT，不被值胶囊/箭头的内容高度带偏。
             .padding(vertical = 2.dp)
+            .height(SETTINGS_ROW_HEIGHT)
             .clip(RoundedCornerShape(10.dp))
             .background(
                 if (focused) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
@@ -745,9 +766,11 @@ private fun ActionRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            // 比 SettingRow 多 2dp：这一行没有值胶囊、本身更矮，不加的话会和上一行贴住。
-            .padding(vertical = 4.dp)
+            // 与 SettingRow/ColorRow 同一固定框高：原来这里靠 4dp 上下的 padding
+            // 补高度，结果仍是纯箭头行、比带胶囊的行矮一截。改成统一 50dp 后，
+            // 间距由 height 前的 2dp 提供，框高不再随内容变。
+            .padding(vertical = 2.dp)
+            .height(SETTINGS_ROW_HEIGHT)
             .onKeyEvent { event ->
                 event.type == KeyEventType.KeyDown && (onKey?.invoke(event.key) ?: false)
             }
@@ -798,5 +821,182 @@ private fun ActionRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/**
+ * 「更多」信息页（0.32.0）。纯只读：应用名 + 版本/作者、两端开源地址、使用说明。
+ *
+ * 排版规则：三层结构、四档字号、组间留白 ≥ 组内 2 倍——
+ *  - 页头：应用名是主角（26sp），版本/作者合成一行灰字注解，不再各占一行表格；
+ *  - 卡片：开源地址、使用说明各一张 surface 圆角卡，和设置页的行同一套视觉语言；
+ *  - 说明条目用 01/02/03 数字序号代替 6dp 小圆点（电视 3 米外圆点看不见）。
+ *
+ * 没有要改的开关，所以不搞二维焦点网格——全页只有一个可聚焦的「返回设置」按钮，
+ * 焦点一进来就落在它身上，按 OK 或返回键都回设置页。README 里的仓库地址写在这里，
+ * 电视上没法复制也没法点开浏览器，所以纯文本展示，不做成可点击链接误导人。
+ */
+@Composable
+fun MoreScreen(onBack: () -> Unit) {
+    val compact = LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
+    // 间距两档：组间（页头→卡片、卡片→卡片、卡片→按钮）明显大于组内（卡片里条目之间），
+    // 人眼才读成「三块」而不是一长串。矮屏按比例收紧，兜底仍是 verticalScroll。
+    //
+    // 数值是按 MuMu 横屏 617dp 实测算出来的：首版组间 32dp 时整页 589dp，比一屏高
+    // 20dp，底部留白被挤掉、返回按钮贴着屏幕下沿。收到 28dp 后整页约 570dp，上下留白
+    // 基本对称；组间:组内仍是 2:1，层次不受影响。
+    val pageGap = if (compact) 24.dp else 28.dp
+    val cardGap = if (compact) 20.dp else 24.dp
+    val headerGap = if (compact) 10.dp else 14.dp
+    val itemGap = if (compact) 10.dp else 14.dp
+
+    val backFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        delay(FOCUS_SETTLE_MS)
+        runCatching { backFocus.requestFocus() }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 64.dp, vertical = if (compact) 12.dp else 16.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.more_title),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(Modifier.height(headerGap))
+        // 应用名是这一页的主角；版本里的 -debug 是构建类型，不该露给用户。
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(Modifier.height(if (compact) 6.dp else 8.dp))
+        Text(
+            text = stringResource(
+                R.string.more_meta,
+                BuildConfig.VERSION_NAME.substringBefore("-"),
+                stringResource(R.string.more_author_name),
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(pageGap))
+        SectionCard(
+            title = stringResource(R.string.more_group_source),
+            compact = compact,
+        ) {
+            SourceRow(
+                stringResource(R.string.more_source_github),
+                stringResource(R.string.more_github_url),
+            )
+            Spacer(Modifier.height(itemGap))
+            SourceRow(
+                stringResource(R.string.more_source_gitee),
+                stringResource(R.string.more_gitee_url),
+            )
+        }
+
+        Spacer(Modifier.height(cardGap))
+        SectionCard(
+            title = stringResource(R.string.more_group_help),
+            compact = compact,
+        ) {
+            HelpItem("01", stringResource(R.string.more_help_1))
+            Spacer(Modifier.height(itemGap))
+            HelpItem("02", stringResource(R.string.more_help_2))
+            Spacer(Modifier.height(itemGap))
+            HelpItem("03", stringResource(R.string.more_help_3))
+        }
+
+        Spacer(Modifier.height(pageGap))
+        ActionRow(
+            title = stringResource(R.string.more_back),
+            // 只占左下角一小块：通栏按钮会把整页「框死」，显得笨重。
+            modifier = Modifier
+                .width(240.dp)
+                .focusRequester(backFocus),
+            onKey = { key ->
+                // 方向键一律吃掉：这一页只有一个可聚焦项，不能让 Compose 的默认
+                // 焦点搜索把焦点移到滚动容器上，否则 OK 就按不动「返回」了。
+                key == Key.DirectionLeft || key == Key.DirectionRight ||
+                    key == Key.DirectionUp || key == Key.DirectionDown
+            },
+            onActivate = onBack,
+        )
+    }
+}
+
+/**
+ * 信息卡片：圆角 12dp + surface 底 + 1dp 边框，和设置页的行同一套视觉语言。
+ * 卡片标题用小号灰字加一点字距，当「组标签」而不是正文。
+ */
+@Composable
+private fun SectionCard(
+    title: String,
+    compact: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+            .padding(
+                horizontal = if (compact) 20.dp else 24.dp,
+                vertical = if (compact) 14.dp else 18.dp,
+            ),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 2.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = if (compact) 10.dp else 12.dp),
+        )
+        content()
+    }
+}
+
+/** 开源地址的一行：左标签小号灰、右 URL 大一号白，3 米外一眼分清哪个是地址。 */
+@Composable
+private fun SourceRow(label: String, url: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(96.dp),
+        )
+        Text(
+            text = url,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+/** 使用说明的一条：01/02/03 数字序号代替小圆点，序号半透明、不抢正文。 */
+@Composable
+private fun HelpItem(index: String, text: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Text(
+            text = index,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+            modifier = Modifier.width(56.dp),
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
     }
 }

@@ -36,6 +36,9 @@ sealed interface AppEvent {
     data class OpenAlbum(val album: SharedAlbum) : AppEvent
     data object OpenSettings : AppEvent
     data object CloseSettings : AppEvent
+    /** 设置页「更多」入口：打开信息页 / 从信息页返回设置页。 */
+    data object OpenMore : AppEvent
+    data object CloseMore : AppEvent
     data object BackToWall : AppEvent
     data object RefreshAlbums : AppEvent
     data object ClearCache : AppEvent

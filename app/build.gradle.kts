@@ -65,7 +65,9 @@ plugins {
 // 0.31.0：新版本提醒——冷启 5 秒后台查 Gitee/GitHub Release（一天一次），取两端最高
 // 版本；有新版本在相册墙弹窗（取消/更新），点更新下载 APK 到私有目录后拉起系统安装。
 // 独立干净 HTTP 客户端与 update_prefs，不碰 NAS 登录配置。更多页排版仍未做。
-val appVersionName = "0.31.0"
+// 0.32.0：设置页「更多」入口接上真正的页面——应用名+版本、作者、GitHub/Gitee 开源地址、
+// 使用说明；返回键与页面内「返回设置」都回设置页，不打断进设置前的返回目标。
+val appVersionName = "0.32.0"
 val appVersionCode = appVersionName
     .split(".")
     .map { it.toInt() }

@@ -61,6 +61,7 @@ import com.kijeye.fnshare.ui.AppState
 import com.kijeye.fnshare.ui.AppViewModel
 import com.kijeye.fnshare.ui.GridScreen
 import com.kijeye.fnshare.ui.LoginScreen
+import com.kijeye.fnshare.ui.MoreScreen
 import com.kijeye.fnshare.presentation.state.Screen
 import com.kijeye.fnshare.ui.SettingsScreen
 import com.kijeye.fnshare.ui.ViewerActions
@@ -313,8 +314,7 @@ private fun App(model: AppViewModel) {
                         onFocusRingColor = { sink.onEvent(AppEvent.FocusRingColor(it)) },
                         onRefresh = { sink.onEvent(AppEvent.RefreshAlbums) },
                         onClearCache = { sink.onEvent(AppEvent.ClearCache) },
-                        // 「更多」页排版下一步做，入口先就位；当前点 OK 不跳转。
-                        onMore = {},
+                        onMore = { sink.onEvent(AppEvent.OpenMore) },
                         onSignOut = { sink.onEvent(AppEvent.SignOut) },
                         onFnMusicSubmit = { user, pass, code ->
                             sink.onEvent(AppEvent.FnMusicSignIn(user, pass, code))
@@ -323,6 +323,12 @@ private fun App(model: AppViewModel) {
                         onFnMusicDismissError = { sink.onEvent(AppEvent.FnMusicDismissLoginError) },
                         onBack = { sink.onEvent(AppEvent.CloseSettings) },
                     )
+                }
+
+                is Screen.More -> {
+                    // 和设置页同一条返回路径：遥控器 BACK 与页面内「返回」按钮都回设置页。
+                    BackHandler { sink.onEvent(AppEvent.CloseMore) }
+                    MoreScreen(onBack = { sink.onEvent(AppEvent.CloseMore) })
                 }
 
                 is Screen.Grid -> {

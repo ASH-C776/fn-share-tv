@@ -53,6 +53,21 @@
     <string name="settings_off">关</string>
     <string name="settings_footer">%1$s · v%2$s</string>
 
+    <!-- 设置 → 更多：只读信息页 -->
+    <string name="more_title">更多</string>
+    <string name="more_meta">版本 %1$s · 作者 %2$s</string>
+    <string name="more_author_name">基耶杰</string>
+    <string name="more_group_source">开源地址</string>
+    <string name="more_source_github">GitHub</string>
+    <string name="more_source_gitee">Gitee</string>
+    <string name="more_github_url">github.com/ASH-C776/fn-share-tv</string>
+    <string name="more_gitee_url">gitee.com/kijeye/fn-share-tv</string>
+    <string name="more_group_help">使用说明</string>
+    <string name="more_help_1">只显示别人共享给这个账号的相册：先在飞牛相册里把相册共享给它，相册墙才会出现。</string>
+    <string name="more_help_2">相册墙上选中按 OK 打开，照片上按 OK 看大图；看大图时左右键翻页、上键呼出菜单、OK 键放大。</string>
+    <string name="more_help_3">在相册墙和照片列表按菜单键进设置，看大图时按菜单键看照片信息；返回键逐层退回。</string>
+    <string name="more_back">返回设置</string>
+
     <string name="grid_loading">正在加载…</string>
     <string name="grid_count">已加载 %1$d / %2$d 张</string>
     <string name="grid_loaded">已加载 %1$d 张</string>
