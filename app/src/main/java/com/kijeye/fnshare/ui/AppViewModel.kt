@@ -28,10 +28,15 @@ import com.kijeye.fnshare.domain.port.MusicSource
 import com.kijeye.fnshare.domain.port.PhotoSource
 import com.kijeye.fnshare.domain.port.SettingsSource
 import com.kijeye.fnshare.domain.port.UpdateSource
+import com.kijeye.fnshare.domain.usecase.CacheSnapshot
+import com.kijeye.fnshare.domain.usecase.CheckMode
 import com.kijeye.fnshare.domain.usecase.FnGroupTracks
 import com.kijeye.fnshare.domain.usecase.FnPlayQueue
 import com.kijeye.fnshare.domain.usecase.DeckExhaustion
+import com.kijeye.fnshare.domain.usecase.SIG_SIZE
 import com.kijeye.fnshare.domain.usecase.SlideshowDeck
+import com.kijeye.fnshare.domain.usecase.needsRebuild
+import com.kijeye.fnshare.domain.usecase.photoIdSig
 import com.kijeye.fnshare.domain.usecase.decideDeckExhaustion
 import com.kijeye.fnshare.domain.usecase.shouldPrefetchDeck
 import com.kijeye.fnshare.domain.usecase.slideshowDeckIds
@@ -45,6 +50,7 @@ import com.kijeye.fnshare.engine.api.MusicPlaybackEngine
 import com.kijeye.fnshare.engine.api.VideoEngine
 import com.kijeye.fnshare.presentation.event.AppEvent
 import com.kijeye.fnshare.presentation.event.AppEventSink
+import com.kijeye.fnshare.presentation.state.RefreshPhase
 import com.kijeye.fnshare.presentation.state.Screen
 import com.kijeye.fnshare.presentation.state.photoPageBelongsTo
 import com.kijeye.fnshare.presentation.state.selectableIds
@@ -442,14 +448,51 @@ class AppViewModel(app: Application) : AndroidViewModel(app), AppEventSink {
     fun dismissAccessCode() = _state.update { it.copy(needAccessCode = false, error = null) }
 
     /**
+     * 手动刷新的终态定时器：把「已是最新 / 刷新失败」显示几秒就收回。
+     *
+     * 再次刷新时入口先 cancel 它、再把阶段改成 CONNECTING；即使旧定时器已经排定，
+     * [finishRefresh] 里的阶段比对也会拦住它，不会误清新一轮的中间态。
+     */
+    private var refreshResultJob: Job? = null
+
+    /**
+     * 收尾一次手动刷新：写终态 → 几秒后自动回 IDLE。
+     *
+     * 只有手动刷新调它；冷启动压根不写 refreshPhase，启动路径零变化。
+     */
+    private fun finishRefresh(phase: RefreshPhase) {
+        refreshResultJob?.cancel()
+        _state.update { it.copy(refreshPhase = phase) }
+        refreshResultJob = viewModelScope.launch {
+            delay(REFRESH_RESULT_SHOW_MS)
+            // 阶段没被新一轮刷新改掉才收回；被改掉了就说明这个定时器已经过期。
+            if (_state.value.refreshPhase == phase) {
+                _state.update { it.copy(refreshPhase = RefreshPhase.IDLE) }
+            }
+        }
+    }
+
+    /**
      * 取相册列表。只有「进墙」这一件事——原来还有个 `startPlaying` 参数用来支持开机自动开演，
      * 那个模式已经去掉了（开机只停相册墙），参数跟着删掉，免得留一个永远传 false 的开关。
      *
      * [goToWall] 决定要不要把画面切回相册墙：登录之后要切（人等着进相册），
      * 设置页按「刷新相册」不要切——刷新现在是后台长任务，得留在设置页看进度。
+     * [manual] 只由「刷新相册」传 true：冷启/登录保持原样，不探测、不写刷新阶段。
      */
-    private fun loadAlbums(goToWall: Boolean = true) {
-        _state.update { it.copy(albumsLoading = true, error = null, starting = false) }
+    private fun loadAlbums(goToWall: Boolean = true, manual: Boolean = false) {
+        // 连点只处理第一次：第二次进来时 albumsLoading 已经同步置 true。
+        // 不能 cancel 第一次的 Job——fetchWholeAlbum 的 runCatching 会把取消当失败弹 toast。
+        if (_state.value.albumsLoading) return
+        refreshResultJob?.cancel()
+        _state.update {
+            it.copy(
+                albumsLoading = true,
+                error = null,
+                starting = false,
+                refreshPhase = if (manual) RefreshPhase.CONNECTING else it.refreshPhase,
+            )
+        }
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { repo.albums() } }
             result.onSuccess { albums ->
@@ -467,6 +510,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app), AppEventSink {
                         screen = if (goToWall) Screen.Wall else it.screen,
                         account = "${settings.userName} · ${settings.host}",
                         error = null,
+                        refreshPhase = if (manual) RefreshPhase.CHECKING else it.refreshPhase,
                     )
                 }
                 // 相册列表也留一份：NAS 掉线时墙还能显示上次的结果。
@@ -477,7 +521,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app), AppEventSink {
                     }
                 }
                 // 张数变了的相册：后台重建清单，让缓存跟上 NAS。
-                syncStaleAlbums(albums)
+                // 手动刷新还会对张数相同的相册探测前几张指纹，抓出「张数没变但照片变了」。
+                syncStaleAlbums(albums, manual)
             }.onFailure { failure ->
                 // NAS 掉线：用缓存里的列表兜底，别把已经显示的墙清空。
                 val address = cacheAddress()
@@ -499,6 +544,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app), AppEventSink {
                         },
                     )
                 }
+                if (manual) finishRefresh(RefreshPhase.FAILED)
             }
         }
     }
@@ -517,10 +563,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app), AppEventSink {
     /**
      * 「刷新相册」：拉一次列表，顺带把缓存和 NAS 对不上的相册后台重建。
      *
-     * 刷新的语义是「让缓存变准」，不是「清空重来」——所以列表里张数没变的相册，
-     * 缓存继续用，一个请求都不发。
+     * 刷新的语义是「让缓存变准」，不是「清空重来」——张数没变的相册缓存继续用，
+     * 但会探测一次第一页的前 [SIG_SIZE] 张指纹：NAS 刚同步进来新照片而列表张数
+     * 还没更新时，靠指纹也能发现。探测失败不冒然重建，整次刷新标成失败。
      */
-    fun refreshAlbums() = loadAlbums(goToWall = false)
+    fun refreshAlbums() = loadAlbums(goToWall = false, manual = true)
 
     /**
      * 打开相册：**按下 OK 的同一帧就切进网格**，清单在后台边读边灌。
@@ -849,45 +896,98 @@ class AppViewModel(app: Application) : AndroidViewModel(app), AppEventSink {
     /**
      * 把缓存和 NAS 对不上的相册排队重建。
      *
-     * 判据是「相册列表里的 photoCount」和「缓存里记的那次快照」比——**不**拿
-     * 「缓存里实际存了多少条」去比：照片接口的列表口径和 photoCount 可能不同
-     * （视频也混在列表里），两个数直接比会一直判成「变了」，于是每次刷新都重建一遍。
+     * 判据由纯函数 [needsRebuild] 定：
+     * - 冷启（[manual]=false）：只看列表 photoCount 和 manifest 快照比，**不**拿缓存实际
+     *   条数比——照片接口把视频也混在列表里，两个口径直接比会每次都判成「变了」。
+     * - 手动刷新：count 相同的再探测第一页前 [SIG_SIZE] 张的 id 指纹，抓出「张数没变
+     *   但照片变了」。探测口径和写入一致（都是 300 一页再取前 24），否则指纹会抖。
+     *
+     * 探测失败不冒然重建，单独记一次失败并把刷新标成失败，避免「明明没查到却说已是最新」。
      */
-    private fun syncStaleAlbums(albums: List<SharedAlbum>) {
-        val address = cacheAddress() ?: return
+    private fun syncStaleAlbums(albums: List<SharedAlbum>, manual: Boolean = false) {
+        val address = cacheAddress() ?: run {
+            if (manual) finishRefresh(RefreshPhase.FAILED)
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
-            val manifest = albumCache.readManifest(address.display)
-            val stale = albums.filter { manifest[it.id] != it.photoCount }
-            if (stale.isEmpty()) return@launch
+            val manifest = albumCache.readManifestInfo(address.display)
+            val snapshots = manifest.mapValues { (_, info) ->
+                CacheSnapshot(info.photoCount, info.sig)
+            }
+
+            // 先看 count：两种模式都成立，也是探测的省流前置（count 变了不必探测）。
+            var probeFailed = 0
+            val countChanged = albums.filter { needsRebuild(it, snapshots[it.id], null, CheckMode.COLD) }
+            val sameCount = if (manual) albums.filterNot { it in countChanged } else emptyList()
+
+            val stale = ArrayList<SharedAlbum>(countChanged)
+            if (manual) {
+                sameCount.forEach { album ->
+                    // 和 fetchWholeAlbum 第一页同口径：300 一页再 take(SIG_SIZE)。
+                    val probe = runCatching {
+                        withContext(Dispatchers.IO) {
+                            repo.photos(album.id, 0, DATE_INDEX_PAGE_SIZE).items.map { it.id }
+                        }
+                    }.getOrNull()
+                    if (probe == null) {
+                        probeFailed++
+                    } else if (needsRebuild(album, snapshots[album.id], probe, CheckMode.MANUAL)) {
+                        stale += album
+                    }
+                }
+            }
+
+            if (stale.isEmpty()) {
+                // 这里就是原来「点了刷新没反应」的死穴：没变化也要给个终态。
+                if (manual) {
+                    finishRefresh(if (probeFailed == 0) RefreshPhase.UP_TO_DATE else RefreshPhase.FAILED)
+                }
+                return@launch
+            }
+
             _state.update {
                 it.copy(cacheRefreshing = true, cacheRebuildTotal = stale.size, cacheRebuildDone = 0)
             }
+            if (manual) _state.update { it.copy(refreshPhase = RefreshPhase.UPDATING) }
+
+            var rebuildFailed = 0
             stale.forEach { album ->
-                rebuildAlbum(album)
+                if (!rebuildAlbum(album)) rebuildFailed++
                 _state.update { it.copy(cacheRebuildDone = it.cacheRebuildDone + 1) }
             }
             _state.update { it.copy(cacheRefreshing = false) }
             refreshCacheStats()
+            if (manual) {
+                finishRefresh(
+                    if (probeFailed == 0 && rebuildFailed == 0) RefreshPhase.UP_TO_DATE
+                    else RefreshPhase.FAILED,
+                )
+            }
         }
     }
 
     /**
-     * 重新拉整本相册的清单，写进缓存。
+     * 重新拉整本相册的清单，写进缓存。返回 false = 网络/写盘失败。
      *
-     * 只在「NAS 上的张数和缓存里记的不一样」时跑：有人加了或删了照片。
-     * 正在看的那本相册会换成新清单——数据本来就变了，显示旧的才是错的。
+     * 整本拉完顺手算出前 [SIG_SIZE] 张的指纹一起记进 manifest，供下次手动刷新比对。
+     * 正在看的那本会换成新清单——数据本来就变了，显示旧的才是错的。
      */
-    private suspend fun rebuildAlbum(album: SharedAlbum) {
-        val address = cacheAddress() ?: return
-        val photos = fetchWholeAlbum(album) ?: return
-        withContext(Dispatchers.IO) {
-            albumCache.write(address.display, album, photos, address.baseUrl)
-            albumCache.trim(CACHE_LIMIT_BYTES)
-        }
+    private suspend fun rebuildAlbum(album: SharedAlbum): Boolean {
+        val address = cacheAddress() ?: return false
+        val photos = fetchWholeAlbum(album) ?: return false
+        val sig = photoIdSig(photos.map { it.id }) // 函数内部只取前 SIG_SIZE 张
+        val ok = runCatching {
+            withContext(Dispatchers.IO) {
+                albumCache.write(address.display, album, photos, address.baseUrl, sig)
+                albumCache.trim(CACHE_LIMIT_BYTES)
+            }
+        }.isSuccess
+        if (!ok) return false
         val grid = _state.value.screen as? Screen.Grid
         if (grid != null && grid.album.id == album.id) {
             _state.update { it.copy(photos = photos, hasMorePhotos = false) }
         }
+        return true
     }
 
     /** 从头到尾把一本相册的清单拉完。返回 null = 网络失败。 */
@@ -2016,6 +2116,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app), AppEventSink {
         const val PAGE_SIZE = 60
 
         /** 新版本检测：冷启延迟 5 秒、一天一次、等回相册墙每 500ms 看一眼。 */
+        /** 手动刷新的终态（已是最新 / 刷新失败）在设置页那一行显示多久。 */
+        const val REFRESH_RESULT_SHOW_MS = 3_000L
+
         const val UPDATE_CHECK_DELAY_MS = 5_000L
         const val UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L
         const val UPDATE_SHOW_POLL_MS = 500L

@@ -2,6 +2,7 @@ package com.kijeye.fnshare.data.local
 
 import com.kijeye.fnshare.core.AppDispatchers
 import com.kijeye.fnshare.data.cache.AlbumCache
+import com.kijeye.fnshare.domain.model.AlbumManifestInfo
 import com.kijeye.fnshare.domain.model.AlbumSnapshot
 import com.kijeye.fnshare.domain.model.CacheStats
 import com.kijeye.fnshare.domain.model.SharedAlbum
@@ -62,13 +63,21 @@ class DiskAlbumCacheSource(private val delegate: AlbumCache) : AlbumCacheSource 
         album: SharedAlbum,
         photos: List<SharedPhoto>,
         baseUrl: String,
-    ) = withContext(AppDispatchers.io) { delegate.write(host, album, photos, baseUrl) }
+        sig: String,
+    ) = withContext(AppDispatchers.io) { delegate.write(host, album, photos, baseUrl, sig) }
 
     override suspend fun writeAlbums(host: String, albums: List<SharedAlbum>, baseUrl: String) =
         withContext(AppDispatchers.io) { delegate.writeAlbums(host, albums, baseUrl) }
 
     override suspend fun readManifest(host: String): Map<Long, Int> =
         withContext(AppDispatchers.io) { delegate.readManifest(host) }
+
+    override suspend fun readManifestInfo(host: String): Map<Long, AlbumManifestInfo> =
+        withContext(AppDispatchers.io) {
+            delegate.readManifestInfo(host).mapValues { (_, info) ->
+                AlbumManifestInfo(info.photoCount, info.sig, info.savedAt)
+            }
+        }
 
     override suspend fun writeManifest(host: String, albumId: Long, photoCount: Int, savedAt: Long) =
         withContext(AppDispatchers.io) { delegate.writeManifest(host, albumId, photoCount, savedAt) }

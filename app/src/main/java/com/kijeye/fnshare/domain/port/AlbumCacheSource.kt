@@ -1,5 +1,6 @@
 package com.kijeye.fnshare.domain.port
 
+import com.kijeye.fnshare.domain.model.AlbumManifestInfo
 import com.kijeye.fnshare.domain.model.AlbumSnapshot
 import com.kijeye.fnshare.domain.model.CacheStats
 import com.kijeye.fnshare.domain.model.SharedAlbum
@@ -48,12 +49,25 @@ interface AlbumCacheSource {
 
     suspend fun readAlbums(host: String, baseUrl: String): List<SharedAlbum>?
 
-    suspend fun write(host: String, album: SharedAlbum, photos: List<SharedPhoto>, baseUrl: String)
+    /**
+     * [sig] 是前 24 张照片 id 的指纹，刷新重建时传进来；
+     * 「翻完页写回当前列表」那条路不传，由 AlbumCache 保留已有指纹。
+     */
+    suspend fun write(
+        host: String,
+        album: SharedAlbum,
+        photos: List<SharedPhoto>,
+        baseUrl: String,
+        sig: String = "",
+    )
 
     suspend fun writeAlbums(host: String, albums: List<SharedAlbum>, baseUrl: String)
 
     /** 相册 id → 建缓存时相册列表报的 photoCount，用于判断缓存是否过期。 */
     suspend fun readManifest(host: String): Map<Long, Int>
+
+    /** 完整快照（张数 + 前 N 张指纹），给手动刷新的精筛判据用。 */
+    suspend fun readManifestInfo(host: String): Map<Long, AlbumManifestInfo>
 
     suspend fun writeManifest(host: String, albumId: Long, photoCount: Int, savedAt: Long)
 

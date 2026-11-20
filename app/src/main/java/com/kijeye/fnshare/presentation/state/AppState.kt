@@ -37,6 +37,22 @@ import com.kijeye.fnshare.domain.model.SharedPhoto
 data class OwnerGroup(val name: String, val albums: List<SharedAlbum>)
 
 /**
+ * 手动刷新相册的阶段，显示在设置页「刷新相册」那一行的值胶囊里。
+ *
+ * 冷启动不走这套状态（保持 IDLE）——启动路径零行为变化。只有人主动按了刷新，
+ * 才依次点亮：连接 → 检查 → 更新 x/y，最后落到「已是最新 / 刷新失败」，
+ * 终态几秒后自动回 IDLE（胶囊恢复成「›」）。
+ */
+enum class RefreshPhase {
+    IDLE,
+    CONNECTING,
+    CHECKING,
+    UPDATING,
+    UP_TO_DATE,
+    FAILED,
+}
+
+/**
  * 相册元数据缓存（设置页里的「照片索引」）的上限：256MB。
  *
  * 一条照片清单约 350 字节，256MB 够存七十多万张。实测一台存了几百本相册的电视，
@@ -104,6 +120,8 @@ data class AppState(
     val cacheRebuildTotal: Int = 0,
     /** 本轮已经重建完几本。 */
     val cacheRebuildDone: Int = 0,
+    /** 手动刷新的阶段；冷启动不动它，始终是 IDLE。 */
+    val refreshPhase: RefreshPhase = RefreshPhase.IDLE,
     val slideshow: Boolean = false,
     /** 幻灯片顺序：开 = 随机跳一张，关 = 按相册顺序。与设置面板同源。 */
     val slideshowShuffled: Boolean = false,

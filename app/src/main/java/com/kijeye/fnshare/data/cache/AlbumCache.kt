@@ -52,6 +52,13 @@ class AlbumCache(context: Context) {
         val photos: List<SharedPhoto>,
     )
 
+    /** manifest 里一本相册的快照：张数 + 前 24 张 id 指纹（老缓存没有 sig）。 */
+    data class ManifestInfo(
+        val photoCount: Int,
+        val sig: String = "",
+        val savedAt: Long = 0L,
+    )
+
     /** 缓存占用情况，给设置页显示。 */
     data class Stats(val bytes: Long, val albums: Int)
 
@@ -127,8 +134,13 @@ class AlbumCache(context: Context) {
 
     // --- 写 ---
 
-    /** 把整本相册的元数据写进缓存。 */
-    fun write(host: String, album: SharedAlbum, photos: List<SharedPhoto>, baseUrl: String) {
+    /**
+     * 把整本相册的元数据写进缓存。
+     *
+     * [sig] 是前 24 张照片 id 的指纹，由调用方（刷新重建）算好传进来；
+     * 「翻完页后写回当前列表」那条路传空串，表示不动已有指纹。
+     */
+    fun write(host: String, album: SharedAlbum, photos: List<SharedPhoto>, baseUrl: String, sig: String = "") {
         val items = JSONArray()
         photos.forEach { photo -> items.put(photoToJson(photo, baseUrl)) }
         val obj = JSONObject()
@@ -142,7 +154,7 @@ class AlbumCache(context: Context) {
         obj.put(KEY_ITEMS, items)
         writeAtomically(albumFile(host, album.id), obj.toString())
         // 清单里也记一笔：下次判断「这本要不要重建」时不用去翻那几百 KB 的正文。
-        writeManifest(host, album.id, album.photoCount, savedAt)
+        writeManifest(host, album.id, album.photoCount, savedAt, sig)
     }
 
     /** 写相册列表缓存。 */
@@ -175,42 +187,36 @@ class AlbumCache(context: Context) {
      * 有了它，判断「哪本该重建」就只是读一个小文件，不用去解析每本相册的完整清单
      * （一本八百张的缓存就是几百 KB，逐本解析在启动路径上太慢）。
      */
-    fun readManifest(host: String): Map<Long, Int> {
+    fun readManifest(host: String): Map<Long, Int> =
+        readManifestInfo(host).mapValues { it.value.photoCount }
+
+    /**
+     * 读完整快照（张数 + 指纹），给手动刷新的精筛判据用。
+     *
+     * 老 manifest 没有 sig 字段，[parseManifest] 读成空串——不升 CACHE_VERSION，
+     * 老缓存文件一个都不作废，探测一次就能自愈补上指纹。
+     */
+    fun readManifestInfo(host: String): Map<Long, ManifestInfo> {
         val file = manifestFile(host)
         if (!file.exists()) return emptyMap()
         return try {
-            val obj = JSONObject(file.readText())
-            if (obj.optInt(KEY_VERSION) != CACHE_VERSION) return emptyMap()
-            val albums = obj.optJSONObject(KEY_ALBUMS) ?: return emptyMap()
-            val out = HashMap<Long, Int>(albums.length())
-            albums.keys().forEach { key ->
-                val id = key.toLongOrNull() ?: return@forEach
-                out[id] = albums.optJSONObject(key)?.optInt(KEY_PHOTO_COUNT) ?: 0
-            }
-            out
+            parseManifest(file.readText())
         } catch (e: Exception) {
             emptyMap()
         }
     }
 
-    /** 记一笔：某本相册缓存的是多少张。 */
-    fun writeManifest(host: String, albumId: Long, photoCount: Int, savedAt: Long) {
+    /**
+     * 记一笔：某本相册缓存的是多少张、前几张的指纹是什么。
+     *
+     * [sig] 为空时**保留**旧条目里已有的指纹：整本清单会被「翻完页后写回当前列表」和
+     * 「刷新重建」两条路写，前者没有指纹，不能把后者刚记下的指纹抹掉——抹掉了下次
+     * 刷新又会误判「未知」重建一遍。
+     */
+    fun writeManifest(host: String, albumId: Long, photoCount: Int, savedAt: Long, sig: String = "") {
         val file = manifestFile(host)
-        val albums = try {
-            val obj = JSONObject(file.readText())
-            obj.optJSONObject(KEY_ALBUMS) ?: JSONObject()
-        } catch (e: Exception) {
-            JSONObject()
-        }
-        val entry = JSONObject()
-        entry.put(KEY_PHOTO_COUNT, photoCount)
-        entry.put(KEY_SAVED_AT, savedAt)
-        albums.put(albumId.toString(), entry)
-        val obj = JSONObject()
-        obj.put(KEY_VERSION, CACHE_VERSION)
-        obj.put(KEY_HOST, host)
-        obj.put(KEY_ALBUMS, albums)
-        writeAtomically(file, obj.toString())
+        val text = try { file.readText() } catch (e: Exception) { "" }
+        writeAtomically(file, mergeManifestEntry(text, host, albumId, photoCount, savedAt, sig))
     }
 
     // --- 清 / 统计 / 淘汰 ---
@@ -313,6 +319,8 @@ private const val KEY_ALBUM_NAME = "name"
 private const val KEY_OWNER = "owner"
 private const val KEY_PHOTO_COUNT = "count"
 private const val KEY_SAVED_AT = "savedAt"
+/** 前 24 张照片 id 的指纹。可选字段：老 manifest 没有，读成空串即可。 */
+private const val KEY_SIG = "sig"
 private const val KEY_ITEMS = "items"
 private const val KEY_ALBUMS = "albums"
 private const val KEY_POSTER = "poster"
@@ -336,6 +344,68 @@ private const val KEY_DURATION = "dur"
 private const val KEY_BYTES = "bytes"
 
 private val TAKEN_FORMAT: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+
+/**
+ * 往 manifest 文本里合并一本相册的快照，产出新文本（纯函数，单测可直接验证增量合并）。
+ *
+ * 两条写入路都会走到这：「重建整本」带 sig，「翻页写回」不带——后者必须继承已有 sig，
+ * 否则指纹被抹掉，下次刷新又当作未知重建一遍。
+ */
+internal fun mergeManifestEntry(
+    manifestText: String,
+    host: String,
+    albumId: Long,
+    photoCount: Int,
+    savedAt: Long,
+    sig: String,
+): String {
+    val obj = try {
+        JSONObject(manifestText).takeIf { it.optInt(KEY_VERSION) == CACHE_VERSION } ?: JSONObject()
+    } catch (e: Exception) {
+        JSONObject()
+    }
+    val albums = obj.optJSONObject(KEY_ALBUMS) ?: JSONObject()
+    val key = albumId.toString()
+    val old = albums.optJSONObject(key)
+    val entry = JSONObject()
+    entry.put(KEY_PHOTO_COUNT, photoCount)
+    entry.put(KEY_SAVED_AT, savedAt)
+    val keptSig = if (sig.isNotEmpty()) sig else old?.optString(KEY_SIG, "").orEmpty()
+    if (keptSig.isNotEmpty()) entry.put(KEY_SIG, keptSig)
+    albums.put(key, entry)
+    obj.put(KEY_VERSION, CACHE_VERSION)
+    obj.put(KEY_HOST, host)
+    obj.put(KEY_ALBUMS, albums)
+    return obj.toString()
+}
+
+/**
+ * 把 manifest 文本还原成「相册 id → 快照」的纯函数（不依赖 Context，单测直接喂字符串）。
+ *
+ * 版本不符 / 结构坏掉一律返回空 map，和 [AlbumCache.readManifestInfo] 老行为一致：
+ * 当成「没有缓存」，手动刷新探测一次就能重建回来，不会崩。
+ */
+internal fun parseManifest(text: String): Map<Long, AlbumCache.ManifestInfo> = try {
+    val obj = JSONObject(text)
+    val albums = if (obj.optInt(KEY_VERSION) == CACHE_VERSION) obj.optJSONObject(KEY_ALBUMS) else null
+    if (albums == null) emptyMap()
+    else {
+        val out = HashMap<Long, AlbumCache.ManifestInfo>(albums.length())
+        albums.keys().forEach { key ->
+            val id = key.toLongOrNull() ?: return@forEach
+            val entry = albums.optJSONObject(key) ?: return@forEach
+            out[id] = AlbumCache.ManifestInfo(
+                photoCount = entry.optInt(KEY_PHOTO_COUNT),
+                // 老缓存没有 sig：optString 缺省返回空串，判据会当成「未知」探测一次。
+                sig = entry.optString(KEY_SIG, ""),
+                savedAt = entry.optLong(KEY_SAVED_AT),
+            )
+        }
+        out
+    }
+} catch (e: Exception) {
+    emptyMap()
+}
 
 /**
  * 把一份清单缓存文本还原成 [AlbumCache.Entry]（0.24.5 从 `read()` 抽出来的纯函数）。

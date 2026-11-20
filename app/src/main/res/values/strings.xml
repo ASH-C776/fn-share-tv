@@ -40,6 +40,10 @@
     <string name="settings_cache_clear_body">会删掉照片索引、缩略图和 1080p 预览。索引删掉后，下次进相册要重新拉一遍清单；图片缓存删掉后，看图要重新下载（原图只在内存里，不受影响）。</string>
     <string name="settings_cache_rebuilding">更新中 %1$d/%2$d</string>
     <string name="settings_refresh">刷新相册</string>
+    <string name="settings_refresh_connecting">正在连接…</string>
+    <string name="settings_refresh_checking">检查中…</string>
+    <string name="settings_refresh_up_to_date">已是最新</string>
+    <string name="settings_refresh_failed">刷新失败</string>
     <string name="settings_more">更多</string>
     <string name="settings_sign_out">退出登录</string>
     <string name="settings_auto_play">打开就自动播放</string>

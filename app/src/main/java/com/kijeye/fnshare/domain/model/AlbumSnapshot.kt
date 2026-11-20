@@ -31,3 +31,15 @@ data class AlbumSnapshot(
 
 /** 缓存占用情况，给设置页显示。 */
 data class CacheStats(val bytes: Long, val albums: Int)
+
+/**
+ * manifest 里一本相册的快照，镜像 `AlbumCache.ManifestInfo`。
+ *
+ * [sig] 是前 24 张照片 id 的指纹；老缓存没有这个字段，读出来是空串，
+ * 手动刷新探测一次即可补上。适配器逐字段对拷，不在这里做判据。
+ */
+data class AlbumManifestInfo(
+    val photoCount: Int,
+    val sig: String = "",
+    val savedAt: Long = 0L,
+)

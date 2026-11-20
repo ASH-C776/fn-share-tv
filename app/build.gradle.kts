@@ -67,7 +67,9 @@ plugins {
 // 独立干净 HTTP 客户端与 update_prefs，不碰 NAS 登录配置。更多页排版仍未做。
 // 0.32.0：设置页「更多」入口接上真正的页面——应用名+版本、作者、GitHub/Gitee 开源地址、
 // 使用说明；返回键与页面内「返回设置」都回设置页，不打断进设置前的返回目标。
-val appVersionName = "0.32.0"
+// 0.32.1：修「刷新看不到新同步照片」——手动刷新对张数不变的相册探测前 24 张 id 指纹，
+// 变了就重建缓存；刷新行给出连接/检查/更新/已是最新/失败反馈，终态几秒后自动收回。
+val appVersionName = "0.32.1"
 val appVersionCode = appVersionName
     .split(".")
     .map { it.toInt() }

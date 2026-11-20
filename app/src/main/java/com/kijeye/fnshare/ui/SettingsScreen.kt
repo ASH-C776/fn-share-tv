@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kijeye.fnshare.BuildConfig
 import com.kijeye.fnshare.R
+import com.kijeye.fnshare.presentation.state.RefreshPhase
 import kotlinx.coroutines.delay
 
 /** 落焦点前等一下：焦点目标要先挂上组合，FocusRequester 才认得它。和网格页同一个值。 */
@@ -368,14 +369,23 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_refresh),
                     // 刷新是后台长任务：进度直接显示在这一行的值胶囊里。
                     // 写成行下面的一行小字会整个掉出视口，等于没写。
-                    value = if (state.cacheRefreshing) {
-                        stringResource(
-                            R.string.settings_cache_rebuilding,
-                            state.cacheRebuildDone,
-                            state.cacheRebuildTotal,
-                        )
-                    } else {
-                        null
+                    // 终态分支放在 cacheRefreshing 之后：重建收尾会先把进度标志清掉。
+                    value = when {
+                        state.refreshPhase == RefreshPhase.CONNECTING ->
+                            stringResource(R.string.settings_refresh_connecting)
+                        state.refreshPhase == RefreshPhase.CHECKING ->
+                            stringResource(R.string.settings_refresh_checking)
+                        state.cacheRefreshing ->
+                            stringResource(
+                                R.string.settings_cache_rebuilding,
+                                state.cacheRebuildDone,
+                                state.cacheRebuildTotal,
+                            )
+                        state.refreshPhase == RefreshPhase.UP_TO_DATE ->
+                            stringResource(R.string.settings_refresh_up_to_date)
+                        state.refreshPhase == RefreshPhase.FAILED ->
+                            stringResource(R.string.settings_refresh_failed)
+                        else -> null
                     },
                     modifier = Modifier.focusRequester(focusGrid[ROW_CACHE_ACTION][COL_LEFT]),
                     onKey = { key -> navigate(ROW_CACHE_ACTION, COL_LEFT, key) },
