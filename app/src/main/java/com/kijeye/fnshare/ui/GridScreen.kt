@@ -270,6 +270,10 @@ fun GridScreen(
             FocusBackdrop(focusUrl, Modifier.fillMaxSize(), requestFactory)
         }
 
+        // 浮动焦点：只给这一块照片网格换滚动规则（焦点钉在四成高处），
+        // 相册墙、设置页等其他页面仍用系统默认行为。
+        // 下面整块沿用原有缩进没有重排——diff 越小，越不容易碰坏原有的焦点/滚动逻辑。
+        PinnedFocusScroll {
         LazyVerticalGrid(
             columns = GridCells.Fixed(GRID_COLUMNS),
             state = gridState,
@@ -376,6 +380,7 @@ fun GridScreen(
                     )
                 }
             }
+        }
         }
 
         // 相册里全是视频（或本来就空）时，网格是一片空白，看起来像加载失败。
